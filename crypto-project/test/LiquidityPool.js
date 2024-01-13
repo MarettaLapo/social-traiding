@@ -165,43 +165,39 @@ const {
 
         //revertedwith
         describe("Validation", function() {
+
+            it("Should validate if the manager's address is not empty", async function () {
+                const {manager} = await loadFixture(deployContract);
+                expect(manager.address).to.be.a.properAddress;
+            });
+
             it("Should revert with the right error if the traiding can't be started yet", async function () {
-                const {liquidityPool} = await loadFixture(deployContract);
-                // await time.increaseTo(await time.latest());
-                try {
-                    await liquidityPool.startTraiding();
-                    throw new Error("Expected an error but didn't get one");
-                  } catch (error) {
-                    expect(error.message).to.include("echo nelzuy torgovat");
-                  }
+                const {liquidityPool, traidingTime} = await loadFixture(deployContract);
+                await expect(liquidityPool.startTraiding()).to.be.revertedWith("echo nelzuy torgovat");
+                await time.increaseTo(await time.latest() + traidingTime);
+                await expect(liquidityPool.startTraiding()).not.to.be.revertedWith("echo nelzuy torgovat");
             });
 
             it("Should revert with the right error if provide called too late", async function () {
                 const {liquidityPool, traidingTime, client, usdc} = await loadFixture(deployContract);
+                await usdc.connect(client).approve(await liquidityPool.getAddress(), 100);
+                await expect(liquidityPool.connect(client).provide(100)).not.to.be.revertedWith("fundrising was finished");
                 await time.increaseTo(await time.latest() + traidingTime);
-                try {
-                    await usdc.connect(client).approve(await liquidityPool.getAddress(), 100);
-                    await liquidityPool.connect(client).provide(100);
-                    throw new Error("Expected an error but didn't get one");
-                  } catch (error) {
-                    expect(error.message).to.include("fundrising was finished");
-                  }
+                await expect(liquidityPool.connect(client).provide(100)).to.be.revertedWith("fundrising was finished");
             });
 
             it("Should revert with the right error if the sender isn't the manager", async function () {
-                const {liquidityPool, client} = await loadFixture(deployContract);
-                try {
-                    await liquidityPool.connect(client).swapUSDCtoETH(100);
-                    throw new Error("Expected an error but didn't get one");
-                  } catch (error) {
-                    expect(error.message).to.include("error usdc to eth");
-                  }
-                try {
-                    await liquidityPool.connect(client).swapETHtoUSDC(100);
-                    throw new Error("Expected an error but didn't get one");
-                  } catch (error) {
-                    expect(error.message).to.include("error eth to usdc");
-                  }
+                const {liquidityPool, client, manager} = await loadFixture(deployContract);
+                await expect(liquidityPool.connect(client).swapUSDCtoETH(100)).to.be.revertedWith("error usdc to eth");
+                await expect(liquidityPool.connect(manager).swapUSDCtoETH(100)).not.to.be.revertedWith("error usdc to eth");
+                await expect(liquidityPool.connect(client).swapETHtoUSDC(100)).to.be.revertedWith("error eth to usdc");
+                await expect(liquidityPool.connect(manager).swapETHtoUSDC(100)).not.to.be.revertedWith("error eth to usdc");
+                // try {
+                //     await liquidityPool.connect(client).swapUSDCtoETH(100);
+                //     throw new Error("Expected an error but didn't get one");
+                //   } catch (error) {
+                //     expect(error.message).to.include("error usdc to eth");
+                //   }
             });
         });
     });
