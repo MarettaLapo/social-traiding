@@ -34,7 +34,7 @@ async function main() {
     const traidingAccAddress = await traidingAccount.getAddress();
     // const traidingTime = 24*60*60;
     const AccountManager = await ethers.getContractFactory("AccountManager");
-    const accountManager = await AccountManager.deploy(usdcAddress, traidingAccAddress, {from: owner});
+    const accountManager = await AccountManager.connect(owner).deploy(usdcAddress, traidingAccAddress);
     await accountManager.deployed();
     // await usdc.transfer(client.address, 1_000_000e6);
     console.log("AccountManager deployed to:", await accountManager.getAddress());
