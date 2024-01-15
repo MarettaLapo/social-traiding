@@ -21,8 +21,8 @@ contract AccountManager is Ownable{
     }
 
 
-    function createAccount(uint256 _fundrisingDuration) public {
-        LiquidityPool lp = new LiquidityPool(msg.sender, USDC, _fundrisingDuration, traidingAccount);
+    function createAccount(uint256 _fundrisingDuration, uint256 _timeForTraiding) public {
+        LiquidityPool lp = new LiquidityPool(msg.sender, USDC, _fundrisingDuration, _timeForTraiding, traidingAccount);
         isValid[lp] = true;
         emit LPCreated(lp, msg.sender);
     }
