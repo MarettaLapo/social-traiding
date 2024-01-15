@@ -12,7 +12,7 @@ const {
 
     async function deployContract() {
 
-        const [owner, manager, client] = await ethers.getSigners();
+        const [manager, owner, client] = await ethers.getSigners();
         const USDC = await ethers.getContractFactory("USDC");
         const usdc = await USDC.deploy();
         const TraidingAccount = await ethers.getContractFactory("TraidingAccount");
@@ -21,7 +21,7 @@ const {
         const traidingAccAddress = await traidingAccount.getAddress();
         const traidingTime = 24*60*60;
         const AccountManager = await ethers.getContractFactory("AccountManager");
-        const accountManager = await AccountManager.deploy(usdcAddress, traidingAccAddress, {from: owner});
+        const accountManager = await AccountManager.connect(owner).deploy(usdcAddress, traidingAccAddress);
         await usdc.transfer(client.address, 1_000_000e6);
         return {accountManager, manager, usdc, client, traidingAccount, traidingTime, owner};
     }
