@@ -9,24 +9,8 @@ import pkg from "hardhat";
 const { ethers } = pkg;
 
 async function main() {
-  //   const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  //   const unlockTime = currentTimestampInSeconds + 60;
 
-  //   const lockedAmount = hre.ethers.parseEther("0.001");
-
-  //   const lock = await hre.ethers.deployContract("Lock", [unlockTime], {
-  //     value: lockedAmount,
-  //   });
-
-  //   await lock.waitForDeployment();
-
-  //   console.log(
-  //     `Lock with ${ethers.formatEther(
-  //       lockedAmount
-  //     )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`
-  //   );
-  // }
-  const [owner, manager, client] = await ethers.getSigners();
+  const [owner, manager] = await ethers.getSigners();
   const USDC = await ethers.getContractFactory("USDC");
   const usdc = await USDC.deploy();
   const TraidingAccount = await ethers.getContractFactory("TraidingAccount");
@@ -41,15 +25,16 @@ async function main() {
   await accountManager.deployed();
   console.log("AccountManager deployed to:", await accountManager.getAddress());
 
-  const traidingTime = 24 * 60 * 60;
+  const fundrisingDuration = 24 * 60 * 60;
+  const timeForTraiding = 30 * 24 * 60 * 60;
   const LiquidityPool = await ethers.getContractFactory("LiquidityPool");
   const liquidityPool = await LiquidityPool.deploy(
     manager.address,
     usdcAddress,
-    traidingTime,
+    fundrisingDuration,
+    timeForTraiding,
     traidingAccAddress
   );
-  // await usdc.transfer(client.address, 1_000_000e6);
   await liquidityPool.deployed();
   console.log("LiquidityPool deployed to:", await liquidityPool.getAddress());
 }
