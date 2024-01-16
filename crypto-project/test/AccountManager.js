@@ -1,11 +1,7 @@
-const { expect } = require("chai");
-const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
-
-const {
-    time,
-    loadFixture,
-  } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
-
+// const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
+import {expect} from 'chai';
+import {time, loadFixture} from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
+import {anyValue} from "@nomicfoundation/hardhat-chai-matchers/withArgs.js";
 
 
   describe("AccountManager", function() {
@@ -19,18 +15,19 @@ const {
         const usdcAddress = await usdc.getAddress();
         const traidingAccount = await TraidingAccount.deploy(usdcAddress);
         const traidingAccAddress = await traidingAccount.getAddress();
-        const traidingTime = 24*60*60;
+        const fundrisingDuration = 24*60*60;
+        const timeForTraiding = 30*24*60*60;
         const AccountManager = await ethers.getContractFactory("AccountManager");
         const accountManager = await AccountManager.connect(owner).deploy(usdcAddress, traidingAccAddress);
         await usdc.transfer(client.address, 1_000_000e6);
-        return {accountManager, manager, usdc, client, traidingAccount, traidingTime, owner};
+        return {accountManager, manager, usdc, client, traidingAccount, fundrisingDuration, owner, timeForTraiding};
     }
     
-    describe("Deployment", function() {
+    describe("Functions", function() {
         it("Should create an account", async function () {
-            const {accountManager, client, traidingTime} = await loadFixture(deployContract);
+            const {accountManager, client, fundrisingDuration, timeForTraiding} = await loadFixture(deployContract);
             
-            const creationOfAcc = accountManager.connect(client).createAccount(traidingTime)
+            const creationOfAcc = accountManager.connect(client).createAccount(fundrisingDuration, timeForTraiding)
             const tx = await creationOfAcc;
 
             const receipt = await tx.wait()
