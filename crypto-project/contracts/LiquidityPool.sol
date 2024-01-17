@@ -14,6 +14,7 @@ contract LiquidityPool{
 
     uint perfomanseFee = 5;
     uint balance = 0;//баланс, который занесли нам инвесторы
+    uint finalbalance = 0;//баланс, который после торговли
     bool canTraiding = false;
     uint256 fundrisingStopTime;//когда закончится время на ввод денег
     uint256 timeForWithdraw; //24 часа на вывод 
@@ -55,7 +56,7 @@ contract LiquidityPool{
         // require(block.timestamp >  withdrawStartTime, "time for vyvod escho ne nastalo");
         // require(block.timestamp <  withdrawStopTime, "time for vyvod yche prochlo");
         require(block.timestamp > timeForStopTraiding, "still phase traiding");
-        uint amountLPToken =  USDC.balanceOf(address(this)) * ownerTokenCount[msg.sender] /  balance;
+        uint amountLPToken =  finalbalance * ownerTokenCount[msg.sender] /  balance;
         ownerTokenCount[msg.sender] = 0;
         USDC.transfer(msg.sender, amountLPToken);
 
@@ -102,6 +103,7 @@ contract LiquidityPool{
         require(block.timestamp > timeForStopTraiding, "still phase traiding");
         traidingAccount.swapETHtoUSDCUniswap{value: address(this).balance}();
         calculateManagerFee();
+        finalbalance = USDC.balanceOf(address(this));
         canTraiding = false;
         // withdrawStartTime = block.timestamp;
         // withdrawStopTime = block.timestamp + timeForWithdraw;
