@@ -44,7 +44,7 @@ contract LiquidityPool{
     receive() payable external{}
 
     function provide(uint amountToken) public{
-       //require(block.timestamp < fundrisingStopTime, "fundrising was finished");
+       require(block.timestamp < fundrisingStopTime, "fundrising was finished");
        ownerTokenCount[msg.sender] += amountToken; 
        balance += amountToken;
        USDC.transferFrom(msg.sender, address(this), amountToken);
