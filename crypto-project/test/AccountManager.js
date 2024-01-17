@@ -1,6 +1,6 @@
 // const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 import {expect} from 'chai';
-import {time, loadFixture} from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
+import {loadFixture} from "@nomicfoundation/hardhat-toolbox/network-helpers.js";
 import {anyValue} from "@nomicfoundation/hardhat-chai-matchers/withArgs.js";
 
 
@@ -15,23 +15,22 @@ import {anyValue} from "@nomicfoundation/hardhat-chai-matchers/withArgs.js";
         const usdcAddress = await usdc.getAddress();
         const traidingAccount = await TraidingAccount.deploy(usdcAddress);
         const traidingAccAddress = await traidingAccount.getAddress();
-        const fundrisingDuration = 24*60*60;
+        const fundrisingStopTime = 24*60*60;
         const timeForTraiding = 30*24*60*60;
         const AccountManager = await ethers.getContractFactory("AccountManager");
         const accountManager = await AccountManager.connect(owner).deploy(usdcAddress, traidingAccAddress);
         await usdc.transfer(client.address, 1_000_000e6);
-        return {accountManager, manager, usdc, client, traidingAccount, fundrisingDuration, owner, timeForTraiding};
+        return {accountManager, manager, usdc, client, traidingAccount, fundrisingStopTime, owner, timeForTraiding};
     }
     
     describe("Functions", function() {
         it("Should create an account", async function () {
-            const {accountManager, client, fundrisingDuration, timeForTraiding} = await loadFixture(deployContract);
+            const {accountManager, client, fundrisingStopTime, timeForTraiding} = await loadFixture(deployContract);
             
-            const creationOfAcc = accountManager.connect(client).createAccount(fundrisingDuration, timeForTraiding)
+            const creationOfAcc = accountManager.connect(client).createAccount(fundrisingStopTime, timeForTraiding);
             const tx = await creationOfAcc;
 
-            const receipt = await tx.wait()
-            // console.log(receipt.logs[0].args);
+            const receipt = await tx.wait();
             const lpAddress = receipt.logs[0].args.lp;
             
             expect(await accountManager.getIsValid(lpAddress)).to.be.true;
