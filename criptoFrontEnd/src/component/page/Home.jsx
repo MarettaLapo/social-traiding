@@ -6,7 +6,11 @@ function Home() {
   const [balance, setBalance] = useState();
   const [currentAccount, setCurrentAccount] = useState();
   const navigate = useNavigate();
+  // const accounts = await provider.listAccounts();
 
+  // setCurrentAccount(accounts[0].address);
+
+  // console.log(accounts[0].address);
   useEffect(() => {
     if (!currentAccount || !ethers.isAddress(currentAccount)) return;
     //client side code

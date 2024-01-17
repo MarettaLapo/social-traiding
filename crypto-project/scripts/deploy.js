@@ -21,21 +21,20 @@ async function main() {
     usdcAddress,
     traidingAccAddress
   );
-  await accountManager.deployed();
   console.log("AccountManager deployed to:", await accountManager.getAddress());
+  console.log("USDC deployed to:", usdcAddress);
 
-  const fundrisingDuration = 24 * 60 * 60;
-  const timeForTraiding = 30 * 24 * 60 * 60;
-  const LiquidityPool = await ethers.getContractFactory("LiquidityPool");
-  const liquidityPool = await LiquidityPool.deploy(
-    manager.address,
-    usdcAddress,
-    fundrisingDuration,
-    timeForTraiding,
-    traidingAccAddress
-  );
-  await liquidityPool.deployed();
-  console.log("LiquidityPool deployed to:", await liquidityPool.getAddress());
+  // const fundrisingDuration = 24 * 60 * 60;
+  // const timeForTraiding = 30 * 24 * 60 * 60;
+  // const LiquidityPool = await ethers.getContractFactory("LiquidityPool");
+  // const liquidityPool = await LiquidityPool.deploy(
+  //   manager.address,
+  //   usdcAddress,
+  //   fundrisingDuration,
+  //   timeForTraiding,
+  //   traidingAccAddress
+  // );
+  // console.log("LiquidityPool deployed to:", await liquidityPool.getAddress());
 }
 
 main().catch((error) => {

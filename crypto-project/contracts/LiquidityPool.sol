@@ -40,10 +40,10 @@ contract LiquidityPool{
         // timeForWithdraw = _timeForWithdraw;
     }
 
-    receive()payable external{}
+    receive() payable external{}
 
     function provide(uint amountToken) public{
-       require(block.timestamp < fundrisingStopTime, "fundrising was finished");
+       //require(block.timestamp < fundrisingStopTime, "fundrising was finished");
        ownerTokenCount[msg.sender] += amountToken; 
        balance += amountToken;
        USDC.transferFrom(msg.sender, address(this), amountToken);
@@ -55,7 +55,7 @@ contract LiquidityPool{
         // require(block.timestamp >  withdrawStartTime, "time for vyvod escho ne nastalo");
         // require(block.timestamp <  withdrawStopTime, "time for vyvod yche prochlo");
         require(block.timestamp > timeForStopTraiding, "still phase traiding");
-        uint amountLPToken = (ownerTokenCount[msg.sender] /  balance) * (USDC.balanceOf(address(this)) -  managerFee);
+        uint amountLPToken =  USDC.balanceOf(address(this)) * ownerTokenCount[msg.sender] /  balance;
         ownerTokenCount[msg.sender] = 0;
         USDC.transfer(msg.sender, amountLPToken);
 
