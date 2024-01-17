@@ -92,7 +92,7 @@ contract LiquidityPool{
         }
         else {
             uint pnl = uint256(USDC.balanceOf(address(this))) - uint256(balance);
-            managerFee = (pnl / 100) * uint256(perfomanseFee);
+            managerFee = pnl * uint256(perfomanseFee) / 100;
             USDC.transfer(managerAddress, managerFee);
             emit managerfeeCalculated(msg.sender, managerFee);
             return managerFee;
