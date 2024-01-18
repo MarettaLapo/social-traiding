@@ -10,7 +10,7 @@ contract  TraidingAccount is ITraidingAccount{
     IERC20 USDC;
     ITraidingAccount traidingAccount;
     address LP;
-    uint256 currency = 2000;
+    uint256 public currency = 2000;
      
     constructor( IERC20 _USDC){
         USDC = _USDC;
