@@ -7,6 +7,7 @@ import * as addresses from "../utils/addresses";
 import accountManagerAbi from "../abi/AccountManager.json";
 import liquidityPoolAbi from "../abi/LiquidityPool.json";
 import usdcAbi from "../abi/USDC.json";
+import Modal from "react-bootstrap/Modal";
 
 import { styled } from "@mui/material/styles";
 import {
@@ -18,7 +19,28 @@ import {
   Paper,
   Table,
   Grid,
+  Button,
 } from "@mui/material";
+
+function createData(
+  lpAddress,
+  balanceLp,
+  balanceOwnerToken,
+  fundrisingStopTime,
+  timeForStopTraiding,
+  canTraiding,
+  contractLP
+) {
+  return {
+    lpAddress,
+    balanceLp,
+    balanceOwnerToken,
+    fundrisingStopTime,
+    timeForStopTraiding,
+    canTraiding,
+    contractLP,
+  };
+}
 
 function Investors() {
   const Item = styled(Paper)(({ theme }) => ({
@@ -33,7 +55,9 @@ function Investors() {
   const [contractAccManager, setContractAccManager] = useState();
   const [contractLiqPool, setContractLiqPool] = useState();
   const [currentAccount, setCurrentAccount] = useState();
-  // const[contract, setContract] = useState();
+  const [datas, setDatas] = useState();
+  const [showModal, setShowModal] = useState(false);
+  const [currentContractLP, setCurrentContractLP] = useState();
   // const[provider, setProvider] = useState();
 
   //получение адреса аккаунта
@@ -72,6 +96,13 @@ function Investors() {
       const events = await contract.queryFilter(contract.filters.LPCreated());
 
       let investorsList = [];
+      let promiseBalanceList = [];
+      let promiseOwnerTokenList = [];
+      let promiseFundrisingStopTime = [];
+      let promiseTimeForStopTraiding = [];
+      let promiseCanTraiding = [];
+      let contratLPList = [];
+
       events.forEach(async (event) => {
         const { lp, manager } = event.args;
         //console.log(event.args);
@@ -81,24 +112,95 @@ function Investors() {
           liquidityPoolAbi.abi,
           signer
         );
-        console.log("contract", contractLP);
-        // let balance = await
-        // let ownerToken = await
-        //адрес, баланс лп, баланс человека
-        investorsList.push([
-          lp,
-          contractLP.getBalance(),
-          contractLP.getOwnerTokenCount(a[0].address),
-        ]);
-      });
-      for (let i of investorsList) {
-        await Promise.all(i[0]);
-      }
 
-      console.log(investorsList);
+        investorsList.unshift(lp);
+        promiseBalanceList.unshift(contractLP.balance());
+        promiseOwnerTokenList.unshift(
+          contractLP.getOwnerTokenCount(a[0].address)
+        );
+        promiseFundrisingStopTime.unshift(contractLP.fundrisingStopTime());
+        promiseTimeForStopTraiding.unshift(contractLP.timeForStopTraiding());
+        promiseCanTraiding.unshift(contractLP.canTraiding());
+        contratLPList.unshift(contractLP);
+      });
+
+      // for (let i of investorsList) {
+      //   console.log(i[1]);
+      //   await Promise.all(i[0]);
+      // }
+
+      const balanceList = await Promise.all(promiseBalanceList);
+      const ownerTokenList = await Promise.all(promiseOwnerTokenList);
+      const fundrisingStopTime = await Promise.all(promiseFundrisingStopTime);
+      const timeForStopTraiding = await Promise.all(promiseTimeForStopTraiding);
+      const canTraiding = await Promise.all(promiseCanTraiding);
+
+      const outputList = investorsList.map(function (e, i) {
+        return [
+          e,
+          balanceList[i],
+          ownerTokenList[i],
+          fundrisingStopTime[i],
+          timeForStopTraiding[i],
+          canTraiding[i],
+          contratLPList[i],
+        ];
+      });
+      const datas = [];
+      for (let item of outputList) {
+        datas.push(
+          createData(
+            item[0],
+            Number(item[1]),
+            Number(item[2]),
+            Number(item[3]),
+            Number(item[4]),
+            item[5],
+            item[6]
+          )
+        );
+      }
+      console.log(datas);
+      setDatas(datas);
     }
     load();
   }, []);
+
+  function handleClose() {
+    setShowModal(false);
+  }
+  function handleOpen(contract) {
+    setCurrentContractLP(contract);
+    setShowModal(true);
+  }
+
+  function isButtonProvide(fundrisingStopTime) {
+    let timeNow = Date.now();
+    let fund = new Date(fundrisingStopTime * 1000).getTime();
+    return timeNow < fund;
+  }
+
+  function isButtonWithdraw(timeForStopTraiding, canTraiding) {
+    let timeNow = Date.now();
+    let timeTrading = new Date(timeForStopTraiding * 1000).getTime();
+    return timeNow > timeTrading && !canTraiding;
+  }
+
+  function isButtonClose(timeForStopTraiding, canTraiding) {
+    let timeNow = Date.now();
+    let timeTrading = new Date(timeForStopTraiding * 1000).getTime();
+    return timeNow > timeTrading && canTraiding;
+  }
+
+  async function provide() {}
+
+  async function withdraw(contract) {
+    await contract.withdraw();
+  }
+
+  async function closeTrading(contract) {
+    await contract.closeTraiding();
+  }
 
   return (
     <div className="container">
@@ -109,7 +211,7 @@ function Investors() {
           </Item>
         </Grid>
         <TableContainer
-          sx={{ maxWidth: 1000 }}
+          // sx={{ maxWidth: 1000 }}
           component={Paper}
           className="mt-5 mb-5"
         >
@@ -123,36 +225,121 @@ function Investors() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {/* {offices.map((office) => (
-              <StyledTableRow key={office.id}>
-                <TableCell  component="th" scope="row">
-                  <Link to={"/office/" + office.id}>{office.number}</Link>
-                </TableCell >
-                <TableCell  align="right">
-                  {office.floor.number}
-                </TableCell >
-                <TableCell  align="right">
-                  {office.isFree ? "Свободен" : "Забронирован"}
-                </TableCell >
-                <TableCell  align="right">{office.area}</TableCell >
-                <TableCell  align="right">
-                  {office.officeDetail.isSun ? "Да" : "Нет"}
-                </TableCell >
-                <TableCell  align="right">
-                  {office.officeDetail.windowsCount}
-                </TableCell >
-                <TableCell  align="right">
-                  {office.officeDetail.isInternet ? "Да" : "Нет"}
-                </TableCell >
-                <TableCell  align="right">
-                  {office.officeDetail.sockets}
-                </TableCell >
-              </StyledTableRow>
-            ))} */}
+              {datas?.map((data) => (
+                <TableRow key={data.lpAddress}>
+                  <TableCell component="th" scope="row">
+                    {data.lpAddress}
+                  </TableCell>
+                  <TableCell align="right">{data.balanceLp}</TableCell>
+                  <TableCell align="right">{data.balanceOwnerToken}</TableCell>
+                  <TableCell align="right">
+                    <div>
+                      {isButtonProvide(data.fundrisingStopTime) && (
+                        <div>
+                          <Button
+                            onClick={() => handleOpen(data.contractLP)}
+                            variant="contained"
+                          >
+                            Provide
+                          </Button>
+                        </div>
+                      )}
+                      {isButtonWithdraw(
+                        data.timeForStopTraiding,
+                        data.canTraiding
+                      ) && (
+                        <div>
+                          <Button
+                            onClick={() => withdraw(data.contractLP)}
+                            variant="contained"
+                          >
+                            Withdraw
+                          </Button>
+                        </div>
+                      )}
+                      {!isButtonClose(
+                        data.timeForStopTraiding,
+                        data.canTraiding
+                      ) && (
+                        <div>
+                          <Button
+                            onClick={() => closeTrading(data.contractLP)}
+                            variant="contained"
+                          >
+                            Close trading
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </TableContainer>
       </Grid>
+      <Modal show={showModal} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Создание трейдинг аккаунта</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={provide} className="ms-5">
+            <div className="mt-3 ms-5">
+              <FormControl>
+                <FormLabel htmlFor="count">Введите время для взноса</FormLabel>
+                <TextField
+                  type="number"
+                  id="standard-basic"
+                  variant="standard"
+                  name="fundTime"
+                  value={fundTime}
+                  onChange={handleFundTime}
+                  placeholder="30"
+                  // error={telephoneError}
+                  className="form-control"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">дней</InputAdornment>
+                    ),
+                  }}
+                  // helperText={telephoneText}
+                  required
+                />
+              </FormControl>
+            </div>
+            <div className="mt-4 ms-5">
+              <FormControl>
+                <FormLabel htmlFor="count">
+                  Введите время для трейдинга
+                </FormLabel>
+                <TextField
+                  type="number"
+                  id="standard-basic"
+                  variant="standard"
+                  name="tradingTime"
+                  placeholder="24"
+                  value={tradingTime}
+                  onChange={handleTradingTime}
+                  // error={fioError}
+                  className="form-control"
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">дней</InputAdornment>
+                    ),
+                  }}
+                  // helperText={fioText}
+                  required
+                />
+              </FormControl>
+            </div>
+            <div className="mt-5 text-center mb-4">
+              <Button type="submit" variant="contained" color="primary">
+                Создать аккаунт
+              </Button>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }
