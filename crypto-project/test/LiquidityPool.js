@@ -4,7 +4,7 @@ import {time, loadFixture} from "@nomicfoundation/hardhat-toolbox/network-helper
 describe("LiquidityPool", function() {
 
     async function deployContract() {
-        const [manager, client] = await ethers.getSigners();
+        const [manager, client, clientTmp] = await ethers.getSigners();
         const USDC = await ethers.getContractFactory("USDC");
         const usdc = await USDC.deploy();
         const TraidingAccount = await ethers.getContractFactory("TraidingAccount");
@@ -14,12 +14,13 @@ describe("LiquidityPool", function() {
         const fundrisingStopTime = 24*60*60;
         const timeForTraiding = 30*24*60*60;
         await usdc.transfer(client.address, 1_000_000e6);
+        await usdc.transfer(clientTmp.address, 1_000_000e6);
 
         const LiquidityPool = await ethers.getContractFactory("LiquidityPool");
         const liquidityPool = await LiquidityPool.deploy(manager.address, usdcAddress, 
                                           fundrisingStopTime, timeForTraiding, traidingAccAddress);
 
-        return {liquidityPool, manager, usdc, client, traidingAccount, fundrisingStopTime, timeForTraiding};
+        return {liquidityPool, manager, usdc, client, clientTmp, traidingAccount, fundrisingStopTime, timeForTraiding};
     }
 
     describe("Deployment", function() {
@@ -50,29 +51,49 @@ describe("LiquidityPool", function() {
                 expect(lpBalance + BigInt(amountToken)).to.equal(await usdc.balanceOf(await liquidityPool.getAddress()));
             });
 
-            //////ПОДПРАВИТЬ!
             it("Should transfer tokens to the client", async function () {
-                const {liquidityPool, client, usdc, fundrisingStopTime, timeForTraiding} = await loadFixture(deployContract);
-                const amountToken = 100n;
-                for (var i=0; i<2; i++){
-                    await usdc.connect(client).approve(await liquidityPool.getAddress(), amountToken);
-                    await liquidityPool.connect(client).provide(amountToken);
-                }
+                const {liquidityPool, client, clientTmp, usdc, fundrisingStopTime, timeForTraiding} = await loadFixture(deployContract);
+                const amountToken =  1000000n;
+
+                await usdc.connect(client).approve(await liquidityPool.getAddress(), amountToken);
+                await liquidityPool.connect(client).provide(amountToken);
+                await usdc.transfer(await liquidityPool.getAddress(), 2n*amountToken);
+
+                await usdc.connect(clientTmp).approve(await liquidityPool.getAddress(), 2n*amountToken);
+                await liquidityPool.connect(clientTmp).provide(2n*amountToken);
+                await usdc.transfer(await liquidityPool.getAddress(), 3n*amountToken);
+
                 const clientBalance = await usdc.balanceOf(client.address);
-                const lpBalance = await usdc.balanceOf(await liquidityPool.getAddress());
+                const clientTmpBalance = await usdc.balanceOf(clientTmp.address);
+                const clientTokens = await liquidityPool.getOwnerTokenCount(client.address);
+                const clientTmpTokens = await liquidityPool.getOwnerTokenCount(clientTmp.address);
 
                 await time.increaseTo(await time.latest() + fundrisingStopTime + timeForTraiding);
-                
+                await liquidityPool.closeTraiding();
 
+                const lpBalance = await usdc.balanceOf(await liquidityPool.getAddress());
+                const amountLPToken = lpBalance * clientTokens / await liquidityPool.balance();
                 const callWithdraw = await liquidityPool.connect(client).withdraw();
+
                 await expect(callWithdraw)
                     .to.emit(liquidityPool, 'ownerWithDrawToken')
-                    .withArgs(client.address, 2n*amountToken);
+                    .withArgs(client.address, amountLPToken);
 
                 expect(await liquidityPool.getOwnerTokenCount(client.address)).to.equal(0);
-                //equal поменялся
-                expect(await usdc.balanceOf(client.address)).to.equal(clientBalance + 2n*amountToken);
-                expect(await usdc.balanceOf(await liquidityPool.getAddress())).to.equal(lpBalance - 2n*amountToken);
+                expect(await usdc.balanceOf(client.address)).to.equal(clientBalance + amountLPToken);
+                expect(await usdc.balanceOf(await liquidityPool.getAddress())).to.equal(lpBalance - amountLPToken);
+
+                ///////////////
+                const amountLPTokenTmp = lpBalance * clientTmpTokens / await liquidityPool.balance();
+                const callWithdrawTmp = await liquidityPool.connect(clientTmp).withdraw();
+
+                await expect(callWithdrawTmp)
+                    .to.emit(liquidityPool, 'ownerWithDrawToken')
+                    .withArgs(clientTmp.address, amountLPTokenTmp);
+
+                expect(await liquidityPool.getOwnerTokenCount(clientTmp.address)).to.equal(0);
+                expect(await usdc.balanceOf(clientTmp.address)).to.equal(clientTmpBalance + amountLPTokenTmp);
+                expect(await usdc.balanceOf(await liquidityPool.getAddress())).to.equal(lpBalance - amountLPToken - amountLPTokenTmp);
             });
         });
 
@@ -82,7 +103,7 @@ describe("LiquidityPool", function() {
                 const {liquidityPool, fundrisingStopTime} = await loadFixture(deployContract);
                 await time.increaseTo(await time.latest() + fundrisingStopTime);
                 await liquidityPool.startTraiding();
-                expect(await liquidityPool.getCanTraiding()).to.be.true;
+                expect(await liquidityPool.canTraiding()).to.be.true;
             });
 
             it("Should close the traiding correctly", async function() {
@@ -98,61 +119,71 @@ describe("LiquidityPool", function() {
 
                 const lpEthBalance = await ethers.provider.getBalance(await liquidityPool.getAddress());
                 const lpBalance = await usdc.balanceOf(await liquidityPool.getAddress());
-                const formula = 2000n * lpEthBalance/BigInt(1e12);
+                const currency = await traidingAccount.currency();
+                const formula = currency * lpEthBalance/BigInt(1e12);
                 const managerBalance = await usdc.balanceOf(manager.address);
                 
                 await time.increaseTo(await time.latest() + fundrisingStopTime + timeForTraiding);
                 
                 await liquidityPool.closeTraiding();
                 
-                expect(await liquidityPool.getCanTraiding()).to.be.false;
+                expect(await liquidityPool.canTraiding()).to.be.false;
                 expect(await ethers.provider.getBalance(await liquidityPool.getAddress())).to.equal(0);
-                expect(lpBalance + formula - await liquidityPool.getManagerFee()).to.
+                expect(lpBalance + formula - await liquidityPool.managerFee()).to.
                                 equal(await usdc.balanceOf(await liquidityPool.getAddress()));
                 expect(lpEthBalance).to.equal(await ethers.provider.getBalance(await traidingAccount.getAddress()));
                 expect(amountToken - formula).to.equal(await usdc.balanceOf(await traidingAccount.getAddress()));
                 expect(await usdc.balanceOf(manager.address)).to.
-                                equal(managerBalance + await liquidityPool.getManagerFee());
+                                equal(managerBalance + await liquidityPool.managerFee());
             });
 
-            it("Should return the right manager fee", async function() {
-                const {liquidityPool, usdc, client, manager, fundrisingStopTime, timeForTraiding} = await loadFixture(deployContract);
+            it("Should return the right manager fee when LP has gained tokens", async function() {
+                const {liquidityPool, usdc, client, manager} = await loadFixture(deployContract);
                 const amountToken = 200n;
                 await usdc.connect(client).approve(await liquidityPool.getAddress(), amountToken);
                 await liquidityPool.connect(client).provide(amountToken);
-                await usdc.transfer(await liquidityPool.getAddress(), amountToken);
+                await usdc.transfer(await liquidityPool.getAddress(), amountToken/4n);
+                const usdcBalance = await usdc.balanceOf((await liquidityPool.getAddress()));
+                const managerBalance = await usdc.balanceOf(manager.address);
+                
+                const callCalculate1 = await liquidityPool.calculateManagerFee();
+
+                await expect(callCalculate1)
+                    .to.emit(liquidityPool, 'managerfeeCalculated')
+                    .withArgs(manager.address, await liquidityPool.managerFee());
+
+                const managerFee = (usdcBalance - await liquidityPool.balance()) * 5n /100n
+                expect(await liquidityPool.managerFee()).to.equal(managerFee);
+                expect(await usdc.balanceOf(await liquidityPool.getAddress())).to.equal(usdcBalance - managerFee);
+                expect(await usdc.balanceOf(manager.address)).to.equal(managerBalance + managerFee);
+            });
+
+            it("Should return the right manager fee when LP has not gained tokens", async function() {
+                const {liquidityPool, usdc, client, manager} = await loadFixture(deployContract);
+                const amountToken = 200n;
+                await usdc.connect(client).approve(await liquidityPool.getAddress(), amountToken);
+                await liquidityPool.connect(client).provide(amountToken);
                 const usdcBalance = await usdc.balanceOf((await liquidityPool.getAddress()));
                 const managerBalance = await usdc.balanceOf(manager.address);
 
-                
-                const callCalculate1 = await liquidityPool.calculateManagerFee();
-                await expect(callCalculate1)
-                    .to.emit(liquidityPool, 'managerfeeCalculated')
-                    .withArgs(manager.address, await liquidityPool.getManagerFee());
-
-
-                const managerFee = (usdcBalance - await liquidityPool.getBalance())/100n * 5n
-                expect(await liquidityPool.getManagerFee()).to.equal(managerFee);
-                expect(await await usdc.balanceOf((await liquidityPool.getAddress()))).to.equal(usdcBalance - managerFee);
-                expect(await usdc.balanceOf(manager.address)).to.equal(managerBalance + managerFee);
-                
-                await time.increaseTo(await time.latest() + fundrisingStopTime + timeForTraiding);
-                await liquidityPool.connect(client).withdraw();
-
                 const callCalculate2 = await liquidityPool.calculateManagerFee();
+
                 await expect(callCalculate2)
                     .to.emit(liquidityPool, 'managerfeeCalculated')
                     .withArgs(manager.address, 0);
 
-                expect(await liquidityPool.getManagerFee()).to.equal(0);
+                expect(await liquidityPool.managerFee()).to.equal(0);
+                expect(await usdc.balanceOf(await liquidityPool.getAddress())).to.equal(usdcBalance);
+                expect(await usdc.balanceOf(manager.address)).to.equal(managerBalance);
             });
         });
+
 
         describe("Swapping", function() {
 
             it("Should swap USDC to ETH", async function(){
                 const {liquidityPool, usdc, traidingAccount, manager, fundrisingStopTime} = await loadFixture(deployContract);
-                const amountToken = 1n;
+                const amountToken = 100n;
                 await usdc.connect(manager).approve(await liquidityPool.getAddress(), amountToken);
                 await liquidityPool.connect(manager).provide(amountToken);
                 await manager.sendTransaction({
@@ -163,6 +194,7 @@ describe("LiquidityPool", function() {
                 const lpEthBalance = await ethers.provider.getBalance(await liquidityPool.getAddress());
                 const lpUsdcBalance = await usdc.balanceOf(await liquidityPool.getAddress());
                 const traidingUsdcBalance = await usdc.balanceOf(await traidingAccount.getAddress());
+                const currency = await traidingAccount.currency();
                 
                 await time.increaseTo(await time.latest() + fundrisingStopTime);
                 await liquidityPool.startTraiding();
@@ -171,9 +203,9 @@ describe("LiquidityPool", function() {
                 
                 expect(traidingUsdcBalance + amountToken).to.equal( await usdc.balanceOf(await traidingAccount.getAddress()));
                 expect(lpUsdcBalance - amountToken).to.equal( await usdc.balanceOf(await liquidityPool.getAddress()));
-                expect(traidingEthBalance - amountToken * BigInt(1e12)/2000n).to.
+                expect(traidingEthBalance - amountToken * BigInt(1e12)/currency).to.
                                 equal(await ethers.provider.getBalance(await traidingAccount.getAddress()));
-                expect(lpEthBalance + amountToken * BigInt(1e12)/2000n).to.
+                expect(lpEthBalance + amountToken * BigInt(1e12)/currency).to.
                                 equal(await ethers.provider.getBalance(await liquidityPool.getAddress()));
             });
             
@@ -189,15 +221,16 @@ describe("LiquidityPool", function() {
                 const lpEthBalance = await ethers.provider.getBalance(await liquidityPool.getAddress());
                 const lpUsdcBalance = await usdc.balanceOf(await liquidityPool.getAddress());
                 const traidingUsdcBalance = await usdc.balanceOf(await traidingAccount.getAddress());
+                const currency = await traidingAccount.currency();
                 
                 await time.increaseTo(await time.latest() + fundrisingStopTime);
                 await liquidityPool.startTraiding();
 
                 await liquidityPool.connect(manager).swapETHtoUSDC(amountToken);
                 
-                expect(traidingUsdcBalance - 2000n * amountToken/BigInt(1e12)).to.
+                expect(traidingUsdcBalance - currency * amountToken/BigInt(1e12)).to.
                                   equal(await usdc.balanceOf(await traidingAccount.getAddress()));
-                expect(lpUsdcBalance + 2000n * amountToken/BigInt(1e12)).to.
+                expect(lpUsdcBalance + currency * amountToken/BigInt(1e12)).to.
                                   equal(await usdc.balanceOf(await liquidityPool.getAddress()));
                 expect(traidingEthBalance + amountToken).to.equal(await ethers.provider.getBalance(await traidingAccount.getAddress()));
                 expect(lpEthBalance - amountToken).to.equal(await ethers.provider.getBalance(await liquidityPool.getAddress()));
@@ -208,17 +241,22 @@ describe("LiquidityPool", function() {
 
     describe("Validation", function() {
 
-        it("Should revert if the manager's address is empty", async function () {
-            const {manager} = await loadFixture(deployContract);
-            expect(manager.address).not.to.equal(0);
-        });
-
         it("Should revert with the right error if the traiding can't be started yet", async function () {
             const {liquidityPool, fundrisingStopTime} = await loadFixture(deployContract);
             await expect(liquidityPool.startTraiding()).to.be.revertedWith("echo nelzuy torgovat");
             
             await time.increaseTo(await time.latest() + fundrisingStopTime);
             await expect(liquidityPool.startTraiding()).not.to.be.revertedWith("echo nelzuy torgovat");
+        });
+
+        it("Should revert with the right error if the traiding was finished", async function () {
+            const {liquidityPool, fundrisingStopTime, timeForTraiding} = await loadFixture(deployContract);
+
+            await time.increaseTo(await time.latest() + fundrisingStopTime);
+            await expect(liquidityPool.startTraiding()).not.to.be.revertedWith("traiding was finished");
+
+            await time.increaseTo(await time.latest() + timeForTraiding);
+            await expect(liquidityPool.startTraiding()).to.be.revertedWith("traiding was finished");
         });
 
         it("Should revert with the right error if the function provide was called too late", async function () {
