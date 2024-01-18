@@ -1,7 +1,13 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+
 import CurrentPrice from "./CurrentPrice";
+import * as addresses from "../utils/addresses";
+
 import accountManagerAbi from "../abi/AccountManager.json";
+import liquidityPoolAbi from "../abi/LiquidityPool.json";
+import usdcAbi from "../abi/USDC.json";
+
 import { styled } from "@mui/material/styles";
 import {
   TableCell,
@@ -24,32 +30,72 @@ function Investors() {
     color: "white",
   }));
   // DeployAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-  const [accountAddress, setAccountAddress] = useState();
+  const [contractAccManager, setContractAccManager] = useState();
+  const [contractLiqPool, setContractLiqPool] = useState();
+  const [currentAccount, setCurrentAccount] = useState();
   // const[contract, setContract] = useState();
   // const[provider, setProvider] = useState();
 
+  //получение адреса аккаунта
   useEffect(() => {
     async function load() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const a = await provider.listAccounts();
-      console.log(a[0]);
+      console.log("Адрес аккаунта: ", a[0].address);
 
-      setAccountAddress(a[0].address);
+      setCurrentAccount(a[0].address);
     }
     load();
   }, []);
 
+  //создание контракта Менеджера
   useEffect(() => {
     async function load() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      const addressContract = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
+      const a = await provider.listAccounts();
+      console.log("Адрес аккаунта: ", a[0].address);
+
+      setCurrentAccount(a[0].address);
+
       const contract = new ethers.Contract(
-        addressContract,
+        addresses.ACCOUNT_MANAGER_ADDRESS,
         accountManagerAbi.abi,
         signer
       );
+      console.log("Контракт менеджера: ", contract);
+      setContractAccManager(contract);
+
+      ///////////////////////////////
+
+      const events = await contract.queryFilter(contract.filters.LPCreated());
+
+      let investorsList = [];
+      events.forEach(async (event) => {
+        const { lp, manager } = event.args;
+        //console.log(event.args);
+
+        const contractLP = new ethers.Contract(
+          lp,
+          liquidityPoolAbi.abi,
+          signer
+        );
+        console.log("contract", contractLP);
+        // let balance = await
+        // let ownerToken = await
+        //адрес, баланс лп, баланс человека
+        investorsList.push([
+          lp,
+          contractLP.getBalance(),
+          contractLP.getOwnerTokenCount(a[0].address),
+        ]);
+      });
+      for (let i of investorsList) {
+        await Promise.all(i[0]);
+      }
+
+      console.log(investorsList);
     }
     load();
   }, []);

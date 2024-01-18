@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import CurrentPrice from "./CurrentPrice";
+import * as addresses from "../utils/addresses";
 import accountManagerAbi from "../abi/AccountManager.json";
 import liquidityPoolAbi from "../abi/LiquidityPool.json";
 import usdcAbi from "../abi/USDC.json";
@@ -51,39 +52,41 @@ function Traders() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      const addressContract = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
+      // const addressContract = "0x0165878A594ca255338adfa4d48449f69242Eb8F";
+      console.log(addresses.ACCOUNT_MANAGER_ADDRESS);
       const contract = new ethers.Contract(
-        addressContract,
+        addresses.ACCOUNT_MANAGER_ADDRESS,
         accountManagerAbi.abi,
         signer
       );
+      console.log(contract);
 
       setContractAccManager(contract);
-      const events = await contract.queryFilter(contract.filters.LPCreated());
-      console.log(events);
-      let need;
-      events.forEach((event) => {
-        const { lp, manager } = event.args;
-        // if (manager === currentAccount) {
-        //   console.log("yay");
-        //   //setAddressLP(lp);
-        // }
-        need = lp;
-        console.log("lp", lp);
-        console.log("manager", manager);
-      });
-      const contractLP = new ethers.Contract(
-        need,
-        liquidityPoolAbi.abi,
-        signer
-      );
-      console.log(contractLP);
-      console.log(await contractLP.getCanTraiding());
-      console.log(
-        await contractLP.getOwnerTokenCount(
-          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-        )
-      );
+      // const events = await contract.queryFilter(contract.filters.LPCreated());
+      // console.log(events);
+      // let need;
+      // events.forEach((event) => {
+      //   const { lp, manager } = event.args;
+      //   // if (manager === currentAccount) {
+      //   //   console.log("yay");
+      //   //   //setAddressLP(lp);
+      //   // }
+      //   need = lp;
+      //   console.log("lp", lp);
+      //   console.log("manager", manager);
+      // });
+      // const contractLP = new ethers.Contract(
+      //   need,
+      //   liquidityPoolAbi.abi,
+      //   signer
+      // );
+      // console.log(contractLP);
+      // console.log(await contractLP.getCanTraiding());
+      // console.log(
+      //   await contractLP.getOwnerTokenCount(
+      //     "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      //   )
+      // );
 
       // const contractUSDC = new ethers.Contract(
       //   "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
@@ -116,7 +119,7 @@ function Traders() {
       //   setIsTrader(true);
       // }
 
-      console.log(accounts[0].address);
+      //console.log(accounts[0].address);
     }
 
     acc();
