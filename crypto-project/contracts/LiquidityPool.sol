@@ -12,14 +12,15 @@ contract LiquidityPool{
     // uint256 withdrawStartTime; // когда начнется 24 часа на вывод
     // uint256 withdrawStopTime;// когда закончится 24 часа на вывод
 
-    uint perfomanseFee = 5;
-    uint balance = 0;//баланс, который занесли нам инвесторы
-    bool canTraiding = false;
-    uint256 fundrisingStopTime;//когда закончится время на ввод денег
-    uint256 timeForWithdraw; //24 часа на вывод 
-    uint256 timeForStopTraiding; // 30 дней на торговлю
+    uint public perfomanseFee = 5;
+    uint public balance = 0;//баланс, который занесли нам инвесторы
+    uint public finalbalance = 0;//баланс, который после торговли
+    bool public canTraiding = false;
+    uint256 public fundrisingStopTime;//когда закончится время на ввод денег
+    uint256 public timeForWithdraw; //24 часа на вывод 
+    uint256 public timeForStopTraiding; // 30 дней на торговлю
     address public managerAddress;
-    uint managerFee;
+    uint public managerFee;
     IERC20 USDC;
     ITraidingAccount traidingAccount;
 
@@ -43,7 +44,7 @@ contract LiquidityPool{
     receive() payable external{}
 
     function provide(uint amountToken) public{
-       //require(block.timestamp < fundrisingStopTime, "fundrising was finished");
+       require(block.timestamp < fundrisingStopTime, "fundrising was finished");
        ownerTokenCount[msg.sender] += amountToken; 
        balance += amountToken;
        USDC.transferFrom(msg.sender, address(this), amountToken);
@@ -55,7 +56,7 @@ contract LiquidityPool{
         // require(block.timestamp >  withdrawStartTime, "time for vyvod escho ne nastalo");
         // require(block.timestamp <  withdrawStopTime, "time for vyvod yche prochlo");
         require(block.timestamp > timeForStopTraiding, "still phase traiding");
-        uint amountLPToken =  USDC.balanceOf(address(this)) * ownerTokenCount[msg.sender] /  balance;
+        uint amountLPToken =  finalbalance * ownerTokenCount[msg.sender] /  balance;
         ownerTokenCount[msg.sender] = 0;
         USDC.transfer(msg.sender, amountLPToken);
 
@@ -65,6 +66,7 @@ contract LiquidityPool{
     function startTraiding() public{
         require(managerAddress == msg.sender, "you are not manager");
         require(block.timestamp > fundrisingStopTime, "echo nelzuy torgovat");
+        require(block.timestamp < timeForStopTraiding, "traiding was finished");
         canTraiding = true;
     }
 
@@ -102,6 +104,7 @@ contract LiquidityPool{
         require(block.timestamp > timeForStopTraiding, "still phase traiding");
         traidingAccount.swapETHtoUSDCUniswap{value: address(this).balance}();
         calculateManagerFee();
+        finalbalance = USDC.balanceOf(address(this));
         canTraiding = false;
         // withdrawStartTime = block.timestamp;
         // withdrawStopTime = block.timestamp + timeForWithdraw;
