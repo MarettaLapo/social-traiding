@@ -12,15 +12,15 @@ contract LiquidityPool{
     // uint256 withdrawStartTime; // когда начнется 24 часа на вывод
     // uint256 withdrawStopTime;// когда закончится 24 часа на вывод
 
-    uint perfomanseFee = 5;
-    uint balance = 0;//баланс, который занесли нам инвесторы
-    uint finalbalance = 0;//баланс, который после торговли
-    bool canTraiding = false;
-    uint256 fundrisingStopTime;//когда закончится время на ввод денег
-    uint256 timeForWithdraw; //24 часа на вывод 
-    uint256 timeForStopTraiding; // 30 дней на торговлю
+    uint public perfomanseFee = 5;
+    uint public balance = 0;//баланс, который занесли нам инвесторы
+    uint public finalbalance = 0;//баланс, который после торговли
+    bool public canTraiding = false;
+    uint256 public fundrisingStopTime;//когда закончится время на ввод денег
+    uint256 public timeForWithdraw; //24 часа на вывод 
+    uint256 public timeForStopTraiding; // 30 дней на торговлю
     address public managerAddress;
-    uint managerFee;
+    uint public managerFee;
     IERC20 USDC;
     ITraidingAccount traidingAccount;
 
@@ -66,6 +66,7 @@ contract LiquidityPool{
     function startTraiding() public{
         require(managerAddress == msg.sender, "you are not manager");
         require(block.timestamp > fundrisingStopTime, "echo nelzuy torgovat");
+        require(block.timestamp < timeForStopTraiding, "traiding was finished");
         canTraiding = true;
     }
 
