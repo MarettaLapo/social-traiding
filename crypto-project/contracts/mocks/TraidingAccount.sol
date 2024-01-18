@@ -35,9 +35,4 @@ contract  TraidingAccount is ITraidingAccount{
     function setCurrency(uint256 value) external {
         currency = value;
     }
-
-    function getCurrency() public view returns (uint256){
-        return currency;
-    }
-
 }

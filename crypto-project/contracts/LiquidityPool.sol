@@ -110,55 +110,8 @@ contract LiquidityPool{
         // withdrawStopTime = block.timestamp + timeForWithdraw;
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    //для теста
     function getOwnerTokenCount(address _address) public view returns (uint){
         return ownerTokenCount[_address];
     }
-
-    //для теста
-    function getCanTraiding() public view returns (bool){
-        return canTraiding;
-    }
-
-    //для теста
-    function getManagerFee() public view returns (uint){
-        return managerFee;
-    }
-
-    //для теста
-    function getBalance() public view returns (uint){
-        return balance;
-    }
-
-
-    // function initStartFundraise() public{
-    //     startFundraise = true;
-    // }
-
-    // function withdraw(uint amountToken)  public {
-    //     require(amountToken <= ownerTokenCount[msg.sender], "amount is too large");
-    //     USDC.transfer( msg.sender, amountToken);
-    //     ownerTokenCount[msg.sender] -= amountToken;
-    
-    // }
 
 }
