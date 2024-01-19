@@ -40,6 +40,7 @@ function Traders() {
   const [isTradingTime, setIsTradingTime] = useState(false);
   const [isTimeForClose, setIsTimeForClose] = useState(false);
 
+  //добавить проверку на то что акк закрылся
   const Item = styled(Paper)(({ theme }) => ({
     backgroundColor: "#666666",
     ...theme.typography.body2,
@@ -51,26 +52,30 @@ function Traders() {
 
   useEffect(() => {
     async function load() {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
 
-      const accounts = await provider.listAccounts();
+        const accounts = await provider.listAccounts();
 
-      setCurrentAccount(accounts[0].address);
+        setCurrentAccount(accounts[0].address);
 
-      const contract = new ethers.Contract(
-        addresses.ACCOUNT_MANAGER_ADDRESS,
-        accountManagerAbi.abi,
-        signer
-      );
-      console.log(contract);
+        const contract = new ethers.Contract(
+          addresses.ACCOUNT_MANAGER_ADDRESS,
+          accountManagerAbi.abi,
+          signer
+        );
+        console.log(contract);
 
-      setContractAccManager(contract);
+        setContractAccManager(contract);
 
-      let answer = await checkIsTrader(contract, accounts[0].address);
-      console.log("mda", answer);
-      if (answer) {
-        setIsTrader(true);
+        let answer = await checkIsTrader(contract, accounts[0].address);
+        console.log("mda", answer);
+        if (answer) {
+          setIsTrader(true);
+        }
+      } catch (e) {
+        console.log(e);
       }
     }
     load();
@@ -116,9 +121,11 @@ function Traders() {
     console.log(payCurrency);
     console.log(inputPay);
     if (payCurrency === "USDC") {
-      await contractLiqPool.swapUSDCtoETH(inputPay);
+      let tx = await contractLiqPool.swapUSDCtoETH(inputPay);
+      await tx.wait();
     } else {
-      await contractLiqPool.swapETHtoUSDC(inputPay);
+      let tx = await contractLiqPool.swapETHtoUSDC(inputPay);
+      await tx.wait();
     }
   }
 
@@ -176,8 +183,12 @@ function Traders() {
       let timeForStopTraiding = Number(await contractLP.timeForStopTraiding());
       let timeStopTrading = new Date(timeForStopTraiding * 1000).getTime();
 
+      let canTrade = await contractLP.canTraiding();
+
       if (dateNow > timeStopTrading) {
-        setIsTimeForClose(true);
+        if (canTrade) {
+          setIsTimeForClose(true);
+        }
       } else {
         if (dateNow > timeStopFund) {
           setIsTradingTime(true);
@@ -213,7 +224,7 @@ function Traders() {
 
   async function closeTrading() {
     let tx = await contractLiqPool.closeTraiding();
-    tx.wait();
+    await tx.wait();
     setIsTimeForClose(false);
     setSwapAvailable(false);
   }
@@ -251,7 +262,7 @@ function Traders() {
                   </Button>
                 </Grid>
               )}
-              {!swapAvailable && (
+              {swapAvailable && (
                 <Grid item xs={12}>
                   <div className="container-sm">
                     <div className="row justify-content-md-center">

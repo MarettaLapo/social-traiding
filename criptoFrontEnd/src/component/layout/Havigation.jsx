@@ -3,11 +3,25 @@ import { useEffect } from "react";
 import { ethers } from "ethers";
 import { NavLink } from "react-router-dom";
 import Button from "@mui/material/Button";
+import Modal from "react-bootstrap/Modal";
+import { FormControl, TextField } from "@mui/material";
+import Snackbar, { SnackbarOrigin } from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+
+import * as addresses from "../utils/addresses";
+import traidingAccountAbi from "../abi/TraidingAccount.json";
 
 const Navigation = () => {
-  const [currentAccount, setCurrentAccount] = useState();
   const accountManager = "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199";
   const [isManager, setIsManager] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [currencyValue, setCurrencyValue] = useState();
+  const [tradingContract, setTradingContract] = useState();
+  const [open, setOpen] = useState(false);
+
+  const handleCloseClick = () => {
+    setOpen(false);
+  };
 
   useEffect(() => {
     async function load() {
@@ -15,14 +29,25 @@ const Navigation = () => {
         console.log("please install MetaMask");
         return;
       }
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await provider.listAccounts();
+
       let address;
       try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        const accounts = await provider.listAccounts();
         address = accounts[0].address;
-        setCurrentAccount(address);
         if (address === accountManager) {
-          isManager(true);
+          const contract = new ethers.Contract(
+            addresses.TRADING_ACCOUNT_ADDRESS,
+            traidingAccountAbi.abi,
+            signer
+          );
+
+          let curr = await contract.currency();
+          setCurrencyValue(Number(curr));
+          setTradingContract(contract);
+          setIsManager(true);
         }
       } catch (e) {
         console.log(e);
@@ -30,6 +55,23 @@ const Navigation = () => {
     }
     load();
   }, []);
+  function handleClose() {
+    setShowModal(false);
+  }
+  function handleOpen() {
+    setShowModal(true);
+  }
+  const handleCurrencyValue = (event) => {
+    setCurrencyValue(event.target.value);
+  };
+
+  async function setCurrency(e) {
+    e.preventDefault();
+    let tx = await tradingContract.setCurrency(currencyValue);
+    let receipt = await tx.wait();
+    setShowModal(false);
+    setOpen(true);
+  }
 
   return (
     <nav>
@@ -49,12 +91,50 @@ const Navigation = () => {
             Traders
           </NavLink>
         </li>
-        <li>
-          <Button variant="outlined" color="error">
-            Currency
-          </Button>
-        </li>
+        {isManager && (
+          <li>
+            <Button variant="outlined" color="error" onClick={handleOpen}>
+              Currency
+            </Button>
+          </li>
+        )}
       </ul>
+      <Modal show={showModal} onHide={handleClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Changing currency</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={setCurrency} className="text-center">
+            <div>
+              <FormControl>
+                <TextField
+                  name="provideValue"
+                  value={currencyValue}
+                  onChange={handleCurrencyValue}
+                  id="standard-basic"
+                  label="Value"
+                  variant="standard"
+                />
+              </FormControl>
+            </div>
+            <div className="mt-4 text-center mb-3">
+              <Button type="submit" variant="contained" color="primary">
+                Change
+              </Button>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
+      <Snackbar open={open} onClose={handleCloseClick} autoHideDuration={6000}>
+        <Alert
+          onClose={handleClose}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          The currency value has been changed successfully
+        </Alert>
+      </Snackbar>
     </nav>
   );
 };

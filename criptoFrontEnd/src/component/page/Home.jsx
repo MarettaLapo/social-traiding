@@ -5,18 +5,33 @@ import { Navigate, useNavigate } from "react-router-dom";
 function Home() {
   const [balance, setBalance] = useState();
   const [currentAccount, setCurrentAccount] = useState();
+  const [error, setError] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!currentAccount || !ethers.isAddress(currentAccount)) return;
-    //client side code
-    if (!window.ethereum) return;
+    async function load() {
+      if (!window.ethereum) {
+        console.log("please install MetaMask");
+        return;
+      }
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
+      let address;
 
-    provider.getBalance(currentAccount).then((result) => {
-      setBalance(ethers.formatEther(result));
-    });
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+
+        const accounts = await provider.listAccounts();
+        address = accounts[0].address;
+        setCurrentAccount(address);
+        provider.getBalance(address).then((result) => {
+          setBalance(ethers.formatEther(result));
+        });
+      } catch (e) {
+        setError(true);
+        console.log(e);
+      }
+    }
+    load();
   }, []);
 
   function toInvest() {
@@ -30,17 +45,21 @@ function Home() {
   return (
     <div className="App">
       <div>Hello.</div>
-      <div>
-        <div>Адрес аккаунта: {currentAccount}</div>
-        <div>Баланс: {balance}</div>
+      {error ? (
+        <div>Обновите метамастк</div>
+      ) : (
         <div>
-          Причина использования:
+          <div>Адрес аккаунта: {currentAccount}</div>
+          <div>Баланс: {balance}</div>
           <div>
-            <button onClick={toInvest}>Инвестирование</button>
-            <button onClick={toTrade}>Трейдинг</button>
+            Причина использования:
+            <div>
+              <button onClick={toInvest}>Инвестирование</button>
+              <button onClick={toTrade}>Трейдинг</button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
