@@ -1,11 +1,13 @@
 ## Команды для запуска:
 Запуск из папки crypto-project
-1.	**yarn hardhat node** - запускает локальный сервер, который выдает 20 тестовых адресов
-2.	**yarn hardhat run scripts/deploy.js — network localhost** - регистрация в этой локальной сети контрактов: USDC, traidingAccount, AccountManager
+1.  **npm i** и **npm i --global npx** - скачать зависимости
+2.	**npx hardhat node** - запускает локальный сервер, который выдает 20 тестовых адресов
+3.	**npx hardhat run scripts/deploy.js --network localhost** - регистрация в этой локальной сети контрактов: USDC, traidingAccount, AccountManager
 
 Запуск из папки cryptoFrontEnd
 
-3.	**npm start** – запуск фронта
+4.  **npm i** - скачать зависимости
+5.	**npm start** – запуск фронта
 
 
 ## Описание проекта:
@@ -28,4 +30,5 @@
 
 
 **Диаграмма классов:**
-![image](https://github.com/MarettaLapo/social-traiding/assets/144190258/615de0d5-7037-49c8-b926-43f7936f85ea)
+![image](https://github.com/MarettaLapo/social-traiding/assets/144190258/4fa6275a-e724-42ce-9591-e389030f1683)
+
