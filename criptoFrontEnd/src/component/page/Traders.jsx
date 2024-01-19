@@ -127,13 +127,21 @@ function Traders() {
   async function swap(e) {
     e.preventDefault();
     let address = await contractLiqPool.getAddress();
-    console.log(address);
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    console.log(contractLiqPool);
+    console.log(inputPay);
+    console.log("nachalo");
+    await signer.sendTransaction({
+      to: await addresses.TRADING_ACCOUNT_ADDRESS,
+      value: ethers.parseEther("5.0"),
+    });
+    let tx;
     if (payCurrency === "USDC") {
-      // await usdcContract.approve(address, inputPay);
-      let tx = await contractLiqPool.swapUSDCtoETH(inputPay);
+      tx = await contractLiqPool.swapUSDCtoETH(inputPay);
       await tx.wait();
     } else {
-      let tx = await contractLiqPool.swapETHtoUSDC(inputPay);
+      tx = await contractLiqPool.swapETHtoUSDC(inputPay);
       await tx.wait();
     }
   }
@@ -211,7 +219,7 @@ function Traders() {
       setCurrencyUSDCtoETH(Number(currency));
 
       let balanceETHLP = await provider.getBalance(lpAddress);
-      setBalanceETH(Number(balanceETHLP));
+      setBalanceETH(ethers.formatEther(Number(balanceETHLP)));
 
       let balanceUSDCLP = await contractLP.balance();
       setBalanceUSDC(Number(balanceUSDCLP));

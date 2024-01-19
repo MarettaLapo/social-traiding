@@ -183,29 +183,28 @@ function Investors() {
     return timeNow < fund;
   }
 
-  async function isButtonWithdraw(timeForStopTraiding, canTraiding, contract) {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
+  function isButtonWithdraw(timeForStopTraiding, canTraiding, contract) {
+    // const provider = new ethers.BrowserProvider(window.ethereum);
+    // const signer = await provider.getSigner();
 
-    const a = await provider.listAccounts();
-    let address = a[0].address;
-    const events = await contract.queryFilter(
-      contract.filters.ownerProvidedToken()
-    );
-    let he = false;
-    events.some((event) => {
-      for (let i = 0; i < event.args.length; i++) {
-        console.log(event.args[i]);
-        if (event.args[i] === address) {
-          he = true;
-        }
-      }
-    });
-    console.log(he);
+    // const a = await provider.listAccounts();
+    // let address = a[0].address;
+    // const events = await contract.queryFilter(
+    //   contract.filters.ownerProvidedToken()
+    // );
+    // let he = false;
+    // events.some((event) => {
+    //   for (let i = 0; i < event.args.length; i++) {
+    //     console.log(event.args[i]);
+    //     if (event.args[i] === address) {
+    //       he = true;
+    //     }
+    //   }
+    // });
+    // console.log(he);
     let timeNow = Date.now();
     let timeTrading = new Date(timeForStopTraiding * 1000).getTime();
-    console.log((timeNow > timeTrading && !canTraiding) || he);
-    return timeNow > timeTrading && !canTraiding && he;
+    return timeNow > timeTrading && !canTraiding;
   }
 
   function isButtonClose(timeForStopTraiding, canTraiding) {
@@ -287,7 +286,7 @@ function Investors() {
                           </Button>
                         </div>
                       )}
-                      {console.log(isButtonWithdraw)}
+
                       {isButtonWithdraw(
                         data.timeForStopTraiding,
                         data.canTraiding,

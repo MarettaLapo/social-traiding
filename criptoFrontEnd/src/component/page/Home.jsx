@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import { Navigate, useNavigate } from "react-router-dom";
+import { Button } from "@mui/material";
 
 function Home() {
   const [balance, setBalance] = useState();
@@ -43,19 +44,28 @@ function Home() {
   }
 
   return (
-    <div className="App">
-      <div>Hello.</div>
+    <div className="container">
+      <div className="fs-1">Hello.</div>
       {error ? (
-        <div>Обновите метамастк</div>
+        <div>Обновите метамаск</div>
       ) : (
-        <div>
+        <div className="fs-5 mt-3">
           <div>Адрес аккаунта: {currentAccount}</div>
           <div>Баланс: {balance}</div>
-          <div>
+          <div className="mt-4">
             Причина использования:
-            <div>
-              <button onClick={toInvest}>Инвестирование</button>
-              <button onClick={toTrade}>Трейдинг</button>
+            <div className="mt-3">
+              <Button
+                className="w-25 me-5"
+                variant="contained"
+                onClick={toInvest}
+              >
+                Investment
+              </Button>
+
+              <Button className="w-25" variant="contained" onClick={toTrade}>
+                Trading
+              </Button>
             </div>
           </div>
         </div>
