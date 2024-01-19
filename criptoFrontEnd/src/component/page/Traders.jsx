@@ -208,9 +208,12 @@ function Traders() {
             <CurrentPrice></CurrentPrice>
           </Item>
         </Grid>
-        {isTrader ? (
+        {!isTrader ? (
           <Grid item xs={12}>
             <Grid container spacing={4}>
+              <Grid item xs={12}>
+                <button>jf</button>
+              </Grid>
               <Grid item xs={12}>
                 <div className="container-sm">
                   <div className="row justify-content-md-center">

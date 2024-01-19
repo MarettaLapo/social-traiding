@@ -20,6 +20,9 @@ import {
   Table,
   Grid,
   Button,
+  FormControl,
+  FormLabel,
+  TextField,
 } from "@mui/material";
 
 function createData(
@@ -58,7 +61,7 @@ function Investors() {
   const [datas, setDatas] = useState();
   const [showModal, setShowModal] = useState(false);
   const [currentContractLP, setCurrentContractLP] = useState();
-  // const[provider, setProvider] = useState();
+  const [provideValue, setProvideValue] = useState();
 
   //получение адреса аккаунта
   useEffect(() => {
@@ -174,6 +177,10 @@ function Investors() {
     setShowModal(true);
   }
 
+  const handleProvideValue = (event) => {
+    setProvideValue(event.target.value);
+  };
+
   function isButtonProvide(fundrisingStopTime) {
     let timeNow = Date.now();
     let fund = new Date(fundrisingStopTime * 1000).getTime();
@@ -192,7 +199,26 @@ function Investors() {
     return timeNow > timeTrading && canTraiding;
   }
 
-  async function provide() {}
+  async function provide(e) {
+    e.preventDefault();
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+
+    const contractUSDC = new ethers.Contract(
+      addresses.USDC_ADDRESS,
+      usdcAbi.abi,
+      signer
+    );
+    console.log(contractUSDC);
+
+    let lpAddress = await currentContractLP.getAddress();
+    console.log(lpAddress);
+
+    await contractUSDC.approve(lpAddress, provideValue);
+    await currentContractLP.provide(provideValue);
+
+    console.log(await currentContractLP.balance());
+  }
 
   async function withdraw(contract) {
     await contract.withdraw();
@@ -257,7 +283,7 @@ function Investors() {
                           </Button>
                         </div>
                       )}
-                      {!isButtonClose(
+                      {isButtonClose(
                         data.timeForStopTraiding,
                         data.canTraiding
                       ) && (
@@ -286,55 +312,25 @@ function Investors() {
           <form onSubmit={provide} className="ms-5">
             <div className="mt-3 ms-5">
               <FormControl>
-                <FormLabel htmlFor="count">Введите время для взноса</FormLabel>
+                <FormLabel htmlFor="count">Укажите сумму ввода</FormLabel>
                 <TextField
                   type="number"
                   id="standard-basic"
                   variant="standard"
-                  name="fundTime"
-                  value={fundTime}
-                  onChange={handleFundTime}
+                  name="provideValue"
+                  value={provideValue}
+                  onChange={handleProvideValue}
                   placeholder="30"
                   // error={telephoneError}
                   className="form-control"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">дней</InputAdornment>
-                    ),
-                  }}
                   // helperText={telephoneText}
-                  required
-                />
-              </FormControl>
-            </div>
-            <div className="mt-4 ms-5">
-              <FormControl>
-                <FormLabel htmlFor="count">
-                  Введите время для трейдинга
-                </FormLabel>
-                <TextField
-                  type="number"
-                  id="standard-basic"
-                  variant="standard"
-                  name="tradingTime"
-                  placeholder="24"
-                  value={tradingTime}
-                  onChange={handleTradingTime}
-                  // error={fioError}
-                  className="form-control"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">дней</InputAdornment>
-                    ),
-                  }}
-                  // helperText={fioText}
                   required
                 />
               </FormControl>
             </div>
             <div className="mt-5 text-center mb-4">
               <Button type="submit" variant="contained" color="primary">
-                Создать аккаунт
+                Внести
               </Button>
             </div>
           </form>
