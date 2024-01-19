@@ -1,8 +1,8 @@
 ## Команды для запуска:
 Запуск из папки crypto-project
-1.  **npm i** - скачать зависимости
-2.	**yarn hardhat node** - запускает локальный сервер, который выдает 20 тестовых адресов
-3.	**yarn hardhat run scripts/deploy.js — network localhost** - регистрация в этой локальной сети контрактов: USDC, traidingAccount, AccountManager
+1.  **npm i** и **npm i --global npx** - скачать зависимости
+2.	**npx hardhat node** - запускает локальный сервер, который выдает 20 тестовых адресов
+3.	**npx hardhat run scripts/deploy.js --network localhost** - регистрация в этой локальной сети контрактов: USDC, traidingAccount, AccountManager
 
 Запуск из папки cryptoFrontEnd
 
