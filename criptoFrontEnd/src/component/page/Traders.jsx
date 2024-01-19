@@ -67,7 +67,6 @@ function Traders() {
 
       setContractAccManager(contract);
 
-      console.log("wot tyt ono");
       let answer = await checkIsTrader(contract, accounts[0].address);
       console.log("mda", answer);
       if (answer) {
@@ -76,19 +75,6 @@ function Traders() {
     }
     load();
   }, []);
-
-  // useEffect(() => {
-  //   async function acc() {
-  //     if (!window.ethereum) {
-  //       console.log("please install MetaMask");
-  //       return;
-  //     }
-  //     const provider = new ethers.BrowserProvider(window.ethereum);
-
-  //   }
-
-  //   acc();
-  // }, []);
 
   const handlePay = (event) => {
     setInputPay(event.target.value);
@@ -210,10 +196,7 @@ function Traders() {
   //TODO: обработать отказ от создания.
   async function createLiqudityPool(e) {
     e.preventDefault();
-    await contractAccManager.createAccount(
-      fundTime * 60 * 60,
-      tradingTime * 60 * 60
-    );
+    await contractAccManager.createAccount(fundTime * 60, tradingTime * 60);
     let answer = await checkIsTrader(contractAccManager, currentAccount);
     console.log("mda", answer);
     if (answer) {
