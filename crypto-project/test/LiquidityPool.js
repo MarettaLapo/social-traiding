@@ -211,7 +211,7 @@ describe("LiquidityPool", function() {
             
             it("Should swap ETH to USDC", async function(){
                 const {liquidityPool, usdc, traidingAccount, manager, fundrisingStopTime} = await loadFixture(deployContract);
-                const amountToken = 1000n;
+                const amountToken = 1000000000000000000n;
                 await usdc.transfer(await traidingAccount.getAddress(), 1_000_000e6);
                 await manager.sendTransaction({
                   to: await liquidityPool.getAddress(),
@@ -221,12 +221,23 @@ describe("LiquidityPool", function() {
                 const lpEthBalance = await ethers.provider.getBalance(await liquidityPool.getAddress());
                 const lpUsdcBalance = await usdc.balanceOf(await liquidityPool.getAddress());
                 const traidingUsdcBalance = await usdc.balanceOf(await traidingAccount.getAddress());
+                // console.log("eth traiding acc", traidingEthBalance);
+                // console.log("eth lp", lpEthBalance);
+                // console.log("usdc traiding acc", traidingUsdcBalance);
+                // console.log("usdc lp", lpUsdcBalance);
+
                 const currency = await traidingAccount.currency();
                 
                 await time.increaseTo(await time.latest() + fundrisingStopTime);
                 await liquidityPool.startTraiding();
 
                 await liquidityPool.connect(manager).swapETHtoUSDC(amountToken);
+
+                // console.log("after function: ")
+                // console.log("eth traiding acc", await ethers.provider.getBalance(await traidingAccount.getAddress()));
+                // console.log("eth lp",  await ethers.provider.getBalance(await liquidityPool.getAddress()));
+                // console.log("usdc traiding acc",await usdc.balanceOf(await traidingAccount.getAddress()));
+                // console.log("usdc lp",  await usdc.balanceOf(await liquidityPool.getAddress()));
                 
                 expect(traidingUsdcBalance - currency * amountToken/BigInt(1e12)).to.
                                   equal(await usdc.balanceOf(await traidingAccount.getAddress()));
