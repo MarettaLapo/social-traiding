@@ -39,6 +39,7 @@ function Traders() {
   const [swapAvailable, setSwapAvailable] = useState(false);
   const [isTradingTime, setIsTradingTime] = useState(false);
   const [isTimeForClose, setIsTimeForClose] = useState(false);
+  const [usdcContract, setUsdcContact] = useState();
 
   //добавить проверку на то что акк закрылся
   const Item = styled(Paper)(({ theme }) => ({
@@ -65,9 +66,16 @@ function Traders() {
           accountManagerAbi.abi,
           signer
         );
-        console.log(contract);
+
+        const contractUSDC = new ethers.Contract(
+          addresses.USDC_ADDRESS,
+          usdcAbi.abi,
+          signer
+        );
 
         setContractAccManager(contract);
+        setUsdcContact(contractUSDC);
+        console.log(contractUSDC);
 
         let answer = await checkIsTrader(contract, accounts[0].address);
         console.log("mda", answer);
@@ -118,9 +126,10 @@ function Traders() {
 
   async function swap(e) {
     e.preventDefault();
-    console.log(payCurrency);
-    console.log(inputPay);
+    let address = await contractLiqPool.getAddress();
+    console.log(address);
     if (payCurrency === "USDC") {
+      // await usdcContract.approve(address, inputPay);
       let tx = await contractLiqPool.swapUSDCtoETH(inputPay);
       await tx.wait();
     } else {
@@ -139,6 +148,8 @@ function Traders() {
       inputContract.filters.LPCreated()
     );
     console.log(events);
+
+    events.reverse();
 
     let lpAddress = undefined;
 
@@ -160,8 +171,41 @@ function Traders() {
       const contractTradingAcc = new ethers.Contract(
         addresses.TRADING_ACCOUNT_ADDRESS,
         traidingAccountAbi.abi,
-        provider
+        signer
       );
+
+      let canTrade = await contractLP.canTraiding();
+      console.log(canTrade);
+
+      let dateNow = Date.now();
+      console.log(new Date());
+      console.log(dateNow);
+
+      let fundrisingStopTime = Number(await contractLP.fundrisingStopTime());
+      let timeStopFund = new Date(fundrisingStopTime * 1000).getTime();
+
+      let timeForStopTraiding = Number(await contractLP.timeForStopTraiding());
+      let timeStopTrading = new Date(timeForStopTraiding * 1000).getTime();
+      //конец торговли, после нее кнопка чтобы закончить, тогда трейд = false, а пока он true
+      console.log(new Date(timeForStopTraiding * 1000));
+      console.log("время", dateNow > timeStopTrading);
+      if (dateNow > timeStopTrading && canTrade === false) {
+        return false;
+      }
+
+      if (dateNow > timeStopTrading) {
+        if (canTrade) {
+          setIsTimeForClose(true);
+        }
+      } else {
+        if (dateNow > timeStopFund) {
+          if (canTrade === false) {
+            setIsTradingTime(true);
+          } else {
+            setSwapAvailable(true);
+          }
+        }
+      }
 
       let currency = await contractTradingAcc.currency();
       setCurrencyUSDCtoETH(Number(currency));
@@ -172,28 +216,6 @@ function Traders() {
       let balanceUSDCLP = await contractLP.balance();
       setBalanceUSDC(Number(balanceUSDCLP));
 
-      // setBalanceETH();
-
-      console.log("ono", contractTradingAcc);
-      let dateNow = Date.now();
-
-      let fundrisingStopTime = Number(await contractLP.fundrisingStopTime());
-      let timeStopFund = new Date(fundrisingStopTime * 1000).getTime();
-
-      let timeForStopTraiding = Number(await contractLP.timeForStopTraiding());
-      let timeStopTrading = new Date(timeForStopTraiding * 1000).getTime();
-
-      let canTrade = await contractLP.canTraiding();
-
-      if (dateNow > timeStopTrading) {
-        if (canTrade) {
-          setIsTimeForClose(true);
-        }
-      } else {
-        if (dateNow > timeStopFund) {
-          setIsTradingTime(true);
-        }
-      }
       setContractLiqPool(contractLP);
 
       console.log("выдано функцией", lpAddress);
@@ -207,8 +229,13 @@ function Traders() {
   //TODO: обработать отказ от создания.
   async function createLiqudityPool(e) {
     e.preventDefault();
-    await contractAccManager.createAccount(fundTime * 60, tradingTime * 60);
+    let tx = await contractAccManager.createAccount(
+      fundTime * 60,
+      tradingTime * 60
+    );
+    await tx.wait();
     let answer = await checkIsTrader(contractAccManager, currentAccount);
+
     console.log("mda", answer);
     if (answer) {
       setIsTrader(true);
@@ -217,7 +244,8 @@ function Traders() {
   }
 
   async function startTrading() {
-    await contractLiqPool.startTraiding();
+    let tx = await contractLiqPool.startTraiding();
+    await tx.wait();
     setIsTradingTime(false);
     setSwapAvailable(true);
   }
