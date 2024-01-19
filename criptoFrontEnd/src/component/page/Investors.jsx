@@ -105,6 +105,7 @@ function Investors() {
       let promiseTimeForStopTraiding = [];
       let promiseCanTraiding = [];
       let contratLPList = [];
+      console.log("event", events);
 
       events.forEach(async (event) => {
         const { lp, manager } = event.args;
@@ -126,11 +127,6 @@ function Investors() {
         promiseCanTraiding.unshift(contractLP.canTraiding());
         contratLPList.unshift(contractLP);
       });
-
-      // for (let i of investorsList) {
-      //   console.log(i[1]);
-      //   await Promise.all(i[0]);
-      // }
 
       const balanceList = await Promise.all(promiseBalanceList);
       const ownerTokenList = await Promise.all(promiseOwnerTokenList);
@@ -187,10 +183,29 @@ function Investors() {
     return timeNow < fund;
   }
 
-  function isButtonWithdraw(timeForStopTraiding, canTraiding) {
+  async function isButtonWithdraw(timeForStopTraiding, canTraiding, contract) {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+
+    const a = await provider.listAccounts();
+    let address = a[0].address;
+    const events = await contract.queryFilter(
+      contract.filters.ownerProvidedToken()
+    );
+    let he = false;
+    events.some((event) => {
+      for (let i = 0; i < event.args.length; i++) {
+        console.log(event.args[i]);
+        if (event.args[i] === address) {
+          he = true;
+        }
+      }
+    });
+    console.log(he);
     let timeNow = Date.now();
     let timeTrading = new Date(timeForStopTraiding * 1000).getTime();
-    return timeNow > timeTrading && !canTraiding;
+    console.log((timeNow > timeTrading && !canTraiding) || he);
+    return timeNow > timeTrading && !canTraiding && he;
   }
 
   function isButtonClose(timeForStopTraiding, canTraiding) {
@@ -221,11 +236,13 @@ function Investors() {
   }
 
   async function withdraw(contract) {
-    await contract.withdraw();
+    let tx = await contract.withdraw();
+    await tx.wait();
   }
 
   async function closeTrading(contract) {
-    await contract.closeTraiding();
+    let tx = await contract.closeTraiding();
+    await tx.wait();
   }
 
   return (
@@ -270,9 +287,11 @@ function Investors() {
                           </Button>
                         </div>
                       )}
+                      {console.log(isButtonWithdraw)}
                       {isButtonWithdraw(
                         data.timeForStopTraiding,
-                        data.canTraiding
+                        data.canTraiding,
+                        data.contractLP
                       ) && (
                         <div>
                           <Button
