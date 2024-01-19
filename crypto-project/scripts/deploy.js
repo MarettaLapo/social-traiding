@@ -16,6 +16,7 @@ async function main() {
   );
   console.log("AccountManager deployed to:", await accountManager.getAddress());
   console.log("USDC deployed to:", usdcAddress);
+  console.log("traidingAccount deployed to:", traidingAccAddress);
 
   // const fundrisingDuration = 24 * 60 * 60;
   // const timeForTraiding = 30 * 24 * 60 * 60;
