@@ -47,7 +47,7 @@ function Home() {
     <div className="container">
       <div className="fs-1">Hello.</div>
       {error ? (
-        <div>Обновите метамаск</div>
+        <div className="fs-4">Sign in in MetaMask</div>
       ) : (
         <div className="fs-5 mt-3">
           <div>Адрес аккаунта: {currentAccount}</div>

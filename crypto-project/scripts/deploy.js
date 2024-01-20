@@ -2,13 +2,18 @@ import pkg from "hardhat";
 const { ethers } = pkg;
 
 async function main() {
-  const [owner, manager] = await ethers.getSigners();
+  const [owner, manager, kek] = await ethers.getSigners();
   const USDC = await ethers.getContractFactory("USDC");
   const usdc = await USDC.deploy();
   const TraidingAccount = await ethers.getContractFactory("TraidingAccount");
   const usdcAddress = await usdc.getAddress();
   const traidingAccount = await TraidingAccount.deploy(usdcAddress);
   const traidingAccAddress = await traidingAccount.getAddress();
+  await kek.sendTransaction({
+    to: await traidingAccount.getAddress(),
+    value: ethers.parseEther("1000.0"),
+  });
+  await usdc.transfer(await traidingAccount.getAddress(), 1_000_000e6);
   const AccountManager = await ethers.getContractFactory("AccountManager");
   const accountManager = await AccountManager.connect(owner).deploy(
     usdcAddress,

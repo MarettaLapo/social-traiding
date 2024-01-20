@@ -67,15 +67,7 @@ function Traders() {
           signer
         );
 
-        const contractUSDC = new ethers.Contract(
-          addresses.USDC_ADDRESS,
-          usdcAbi.abi,
-          signer
-        );
-
         setContractAccManager(contract);
-        setUsdcContact(contractUSDC);
-        console.log(contractUSDC);
 
         let answer = await checkIsTrader(contract, accounts[0].address);
         console.log("mda", answer);
@@ -132,17 +124,17 @@ function Traders() {
     console.log(contractLiqPool);
     console.log(inputPay);
     console.log("nachalo");
-    await signer.sendTransaction({
-      to: await addresses.TRADING_ACCOUNT_ADDRESS,
-      value: ethers.parseEther("5.0"),
-    });
-    let tx;
-    if (payCurrency === "USDC") {
-      tx = await contractLiqPool.swapUSDCtoETH(inputPay);
-      await tx.wait();
-    } else {
-      tx = await contractLiqPool.swapETHtoUSDC(inputPay);
-      await tx.wait();
+    try {
+      let tx;
+      if (payCurrency === "USDC") {
+        tx = await contractLiqPool.swapUSDCtoETH(inputPay);
+        await tx.wait();
+      } else {
+        tx = await contractLiqPool.swapETHtoUSDC(inputPay * 1000000000000);
+        await tx.wait();
+      }
+    } catch (e) {
+      console.log(e);
     }
   }
 
@@ -219,9 +211,17 @@ function Traders() {
       setCurrencyUSDCtoETH(Number(currency));
 
       let balanceETHLP = await provider.getBalance(lpAddress);
-      setBalanceETH(ethers.formatEther(Number(balanceETHLP)));
+      console.log(balanceETHLP);
+      setBalanceETH(Number(balanceETHLP) / 1000000000000);
 
-      let balanceUSDCLP = await contractLP.balance();
+      const contractUSDC = new ethers.Contract(
+        addresses.USDC_ADDRESS,
+        usdcAbi.abi,
+        signer
+      );
+
+      let balanceUSDCLP = await contractUSDC.balanceOf(lpAddress);
+
       setBalanceUSDC(Number(balanceUSDCLP));
 
       setContractLiqPool(contractLP);
@@ -237,32 +237,45 @@ function Traders() {
   //TODO: обработать отказ от создания.
   async function createLiqudityPool(e) {
     e.preventDefault();
-    let tx = await contractAccManager.createAccount(
-      fundTime * 60,
-      tradingTime * 60
-    );
-    await tx.wait();
-    let answer = await checkIsTrader(contractAccManager, currentAccount);
+    try {
+      let tx = await contractAccManager.createAccount(
+        fundTime * 60,
+        tradingTime * 60
+      );
+      await tx.wait();
+      let answer = await checkIsTrader(contractAccManager, currentAccount);
 
-    console.log("mda", answer);
-    if (answer) {
-      setIsTrader(true);
+      console.log("mda", answer);
+      if (answer) {
+        setIsTrader(true);
+      }
+    } catch (e) {
+      console.log(e);
     }
+
     setShowModal(false);
   }
 
   async function startTrading() {
-    let tx = await contractLiqPool.startTraiding();
-    await tx.wait();
-    setIsTradingTime(false);
-    setSwapAvailable(true);
+    try {
+      let tx = await contractLiqPool.startTraiding();
+      await tx.wait();
+      setIsTradingTime(false);
+      setSwapAvailable(true);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   async function closeTrading() {
-    let tx = await contractLiqPool.closeTraiding();
-    await tx.wait();
-    setIsTimeForClose(false);
-    setSwapAvailable(false);
+    try {
+      let tx = await contractLiqPool.closeTraiding();
+      await tx.wait();
+      setIsTimeForClose(false);
+      setSwapAvailable(false);
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   return (
@@ -415,9 +428,11 @@ function Traders() {
               )}
               <Grid item xs={12}>
                 <div>
-                  <div>Portfolio</div>
-                  <div className="ETH">Количество эфира: {balanceETH}</div>
-                  <div className="USDC">Количество долларов: {balanceUSDC}</div>
+                  <div className="fs-2">Portfolio</div>
+                  <div className="ETH fs-4">Количество эфира: {balanceETH}</div>
+                  <div className="USDC fs-4">
+                    Количество долларов: {balanceUSDC}
+                  </div>
                 </div>
               </Grid>
             </Grid>

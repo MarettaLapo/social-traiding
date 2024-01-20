@@ -23,6 +23,8 @@ import {
   FormControl,
   FormLabel,
   TextField,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 
 function createData(
@@ -32,7 +34,10 @@ function createData(
   fundrisingStopTime,
   timeForStopTraiding,
   canTraiding,
-  contractLP
+  contractLP,
+  balanceUSDC,
+  balanceETH,
+  fee
 ) {
   return {
     lpAddress,
@@ -42,6 +47,9 @@ function createData(
     timeForStopTraiding,
     canTraiding,
     contractLP,
+    balanceUSDC,
+    balanceETH,
+    fee,
   };
 }
 
@@ -62,6 +70,8 @@ function Investors() {
   const [showModal, setShowModal] = useState(false);
   const [currentContractLP, setCurrentContractLP] = useState();
   const [provideValue, setProvideValue] = useState();
+  const [usdcContract, setUsdcContact] = useState();
+  const [open, setOpen] = useState(false);
 
   //получение адреса аккаунта
   useEffect(() => {
@@ -91,6 +101,12 @@ function Investors() {
         accountManagerAbi.abi,
         signer
       );
+      const contractUSDC = new ethers.Contract(
+        addresses.USDC_ADDRESS,
+        usdcAbi.abi,
+        signer
+      );
+      setUsdcContact(contractUSDC);
       console.log("Контракт менеджера: ", contract);
       setContractAccManager(contract);
 
@@ -105,6 +121,9 @@ function Investors() {
       let promiseTimeForStopTraiding = [];
       let promiseCanTraiding = [];
       let contratLPList = [];
+      let promiseBalanceUsdc = [];
+      let promiseBalanceETH = [];
+      let promiseFee = [];
       console.log("event", events);
 
       events.forEach(async (event) => {
@@ -117,6 +136,20 @@ function Investors() {
           signer
         );
 
+        let balanceETHLP = provider.getBalance(lp);
+        console.log(balanceETHLP);
+
+        //setBalanceETH(Number(balanceETHLP) / 1000000000000);
+
+        const contractUSDC = new ethers.Contract(
+          addresses.USDC_ADDRESS,
+          usdcAbi.abi,
+          signer
+        );
+
+        let balanceUSDCLP = contractUSDC.balanceOf(lp);
+        console.log(balanceUSDCLP);
+
         investorsList.unshift(lp);
         promiseBalanceList.unshift(contractLP.balance());
         promiseOwnerTokenList.unshift(
@@ -126,6 +159,9 @@ function Investors() {
         promiseTimeForStopTraiding.unshift(contractLP.timeForStopTraiding());
         promiseCanTraiding.unshift(contractLP.canTraiding());
         contratLPList.unshift(contractLP);
+        promiseBalanceUsdc.unshift(balanceUSDCLP);
+        promiseBalanceETH.unshift(balanceETHLP);
+        promiseFee.unshift(contractLP.perfomanseFee());
       });
 
       const balanceList = await Promise.all(promiseBalanceList);
@@ -133,6 +169,11 @@ function Investors() {
       const fundrisingStopTime = await Promise.all(promiseFundrisingStopTime);
       const timeForStopTraiding = await Promise.all(promiseTimeForStopTraiding);
       const canTraiding = await Promise.all(promiseCanTraiding);
+      const BalanceUsdc = await Promise.all(promiseBalanceUsdc);
+      const BalanceETH = await Promise.all(promiseBalanceETH);
+      const fee = await Promise.all(promiseFee);
+
+      console.log("eth", fee);
 
       const outputList = investorsList.map(function (e, i) {
         return [
@@ -143,6 +184,9 @@ function Investors() {
           timeForStopTraiding[i],
           canTraiding[i],
           contratLPList[i],
+          BalanceUsdc[i],
+          BalanceETH[i],
+          fee[i],
         ];
       });
       const datas = [];
@@ -155,7 +199,10 @@ function Investors() {
             Number(item[3]),
             Number(item[4]),
             item[5],
-            item[6]
+            item[6],
+            Number(item[7]),
+            Number(item[8]) / 1000000000000,
+            Number(item[9])
           )
         );
       }
@@ -228,20 +275,38 @@ function Investors() {
     let lpAddress = await currentContractLP.getAddress();
     console.log(lpAddress);
 
-    await contractUSDC.approve(lpAddress, provideValue);
-    await currentContractLP.provide(provideValue);
+    try {
+      await contractUSDC.approve(lpAddress, provideValue);
+      await currentContractLP.provide(provideValue);
+    } catch (e) {
+      console.log(e);
+    }
 
     console.log(await currentContractLP.balance());
   }
 
   async function withdraw(contract) {
-    let tx = await contract.withdraw();
-    await tx.wait();
+    try {
+      let tx = await contract.withdraw();
+      await tx.wait();
+    } catch (e) {
+      if (e.reason === "you dont have money") {
+        setOpen(true);
+      }
+      console.log(e.reason);
+    }
   }
+  const handleCloseClick = () => {
+    setOpen(false);
+  };
 
   async function closeTrading(contract) {
-    let tx = await contract.closeTraiding();
-    await tx.wait();
+    try {
+      let tx = await contract.closeTraiding();
+      await tx.wait();
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   return (
@@ -261,7 +326,10 @@ function Investors() {
             <TableHead>
               <TableRow>
                 <TableCell>Manager</TableCell>
+                <TableCell align="right">Manager Fee</TableCell>
                 <TableCell align="right">Total Invested</TableCell>
+                <TableCell align="right">USDC Now</TableCell>
+                <TableCell align="right">ETH Now</TableCell>
                 <TableCell align="right">Your balance</TableCell>
                 <TableCell align="right">Action</TableCell>
               </TableRow>
@@ -272,7 +340,10 @@ function Investors() {
                   <TableCell component="th" scope="row">
                     {data.lpAddress}
                   </TableCell>
+                  <TableCell align="right">{data.fee}%</TableCell>
                   <TableCell align="right">{data.balanceLp}</TableCell>
+                  <TableCell align="right">{data.balanceUSDC}</TableCell>
+                  <TableCell align="right">{data.balanceETH}</TableCell>
                   <TableCell align="right">{data.balanceOwnerToken}</TableCell>
                   <TableCell align="right">
                     <div>
@@ -354,6 +425,16 @@ function Investors() {
           </form>
         </Modal.Body>
       </Modal>
+      <Snackbar open={open} onClose={handleCloseClick} autoHideDuration={6000}>
+        <Alert
+          onClose={handleClose}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          Вы не вкладывали денег
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

@@ -56,6 +56,7 @@ contract LiquidityPool{
         // require(block.timestamp >  withdrawStartTime, "time for vyvod escho ne nastalo");
         // require(block.timestamp <  withdrawStopTime, "time for vyvod yche prochlo");
         require(block.timestamp > timeForStopTraiding, "still phase traiding");
+        require(ownerTokenCount[msg.sender] > 0, "you dont have money");
         uint amountLPToken =  finalbalance * ownerTokenCount[msg.sender] /  balance;
         ownerTokenCount[msg.sender] = 0;
         USDC.transfer(msg.sender, amountLPToken);
